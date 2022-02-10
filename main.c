@@ -2,15 +2,16 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdnoreturn.h>
+#include <stdarg.h>
 
-
-void fatal_error(const char* str) {
+noreturn void fatal_error(const char* str) {
     fprintf(stderr, "%s", str);
     exit(1);
 }
 
 struct Polynom {
-    void* koefs;
+    char* koefs;
     size_t koef_size;
     size_t degree;
 };
@@ -21,19 +22,35 @@ struct Operations {
     void (*multiply)(void*, const void*);
 };
 
+struct Polynom Polynom_new(size_t koef_size, size_t degree, void* koefs) {
+    struct Polynom new = {
+        .degree = degree,
+        .koef_size = koef_size,
+        .koefs = koefs
+    };
+    return new;
+}
 
-void add(struct Polynom *left, const struct Polynom right, const struct Operations ops) {
+void intPolynom_print(const struct Polynom p) {
+    int *const koefs = (void *const)p.koefs;
+    for(size_t i = 0; i <= p.degree; ++i) {
+        printf("%d\t", koefs[i]);
+    }
+    printf("\n");
+}
+
+
+void Polynom_add(struct Polynom *left, const struct Polynom right, const struct Operations ops) {
     if(left == NULL) {
         fatal_error("left addend is NULL");
-        return;
-    }
-    if(left->degree != right.degree) {
-        fatal_error("koef counts are not equal");
-        return;
     }
     if(left->koef_size != right.koef_size) {
         fatal_error("koef type differs");
-        return;
+    }
+
+    if(right.degree > left->degree) {
+        left->degree = right.degree;
+        left->koefs = realloc(left->koefs, right.degree * right.koef_size);
     }
 
     size_t count = left->degree;
@@ -41,25 +58,23 @@ void add(struct Polynom *left, const struct Polynom right, const struct Operatio
     for(size_t i = 0; i < count; ++i) {
         ops.add(left->koefs + i * size, right.koefs + i * size);
     }
-};
+}
 
-void multiplyByPolynom(struct Polynom *left, const struct Polynom right, const struct Operations ops) {
+void Polynom_multByPolynom(struct Polynom *left, const struct Polynom right, const struct Operations ops) {
     if(left == NULL) {
         fatal_error("left multiplier is NULL");
-        return;
     }
     if(left->koef_size != right.koef_size) {
         fatal_error("koef type differs");
-        return;
     }
 
     size_t size = left->koef_size;
     size_t new_degree = left->degree + right.degree;
-    void* new_koefs = malloc((new_degree+1) * size);
-    void* buff = malloc(size);
+    char* new_koefs = malloc((new_degree+1) * size);
     for(size_t i = 0; i <= new_degree; ++i) {
         ops.makeZero(new_koefs + (i * size));
     }
+    void* buff = malloc(size);
     for(size_t i = 0; i <= left->degree; ++i) {
         for(size_t j = 0; j <= right.degree; ++j) {
             void *mul1 = left->koefs + i * size;
@@ -76,10 +91,9 @@ void multiplyByPolynom(struct Polynom *left, const struct Polynom right, const s
     left->degree = new_degree;
 }
 
-void multiplyBySkalar(struct Polynom *left, const void *right, const struct Operations ops) {
+void Polynom_multBySkalar(struct Polynom *left, const void *right, const struct Operations ops) {
     if(left == NULL) {
         fatal_error("left multiplier is NULL");
-        return;
     }
     size_t size = left->koef_size;
     for(size_t i = 0; i <= left->degree; ++i) {
@@ -87,25 +101,37 @@ void multiplyBySkalar(struct Polynom *left, const void *right, const struct Oper
     }
 }
 
-void compose(struct Polynom *left, const struct Polynom right, const struct Operations ops) {
-    for(size_t i = 0; i <= left->degree; ++i) {
-        size_t size = left->koef_size;
+void Polynom_compose(struct Polynom *left, const struct Polynom right, const struct Operations ops) {
+    size_t size = left->koef_size;
+    size_t max_result_degree = right.degree * left->degree;
+    struct Polynom result = {
+                .koefs = malloc(size * (max_result_degree + 1)),
+                .koef_size = size,
+                .degree = max_result_degree
+    };
+    memcpy(result.koefs, left->koefs, size);
+    for(size_t i = 1; i <= max_result_degree; ++i) {
+        ops.makeZero(result.koefs + i * size);
+    }
+    for(size_t i = 1; i <= left->degree; ++i) {
         struct Polynom buff = {
             .koef_size = size,
             .degree = right.degree,
         };
         buff.koefs = malloc((buff.degree+1) * size);
-        memcpy(&buff.koefs, right.koefs, buff.degree * size);
+        memcpy(buff.koefs, right.koefs, (buff.degree+1) * size);
         for(size_t j = 1; j < i; j++) {
-            multiplyByPolynom(&buff, right, ops);
+            Polynom_multByPolynom(&buff, right, ops);
         }
-        multiplyBySkalar(&buff, left->koefs + i * size, ops);
-        free(left->koefs);
-        memcpy(left, &buff, sizeof(struct Polynom));
+        Polynom_multBySkalar(&buff, left->koefs + i * size, ops);
+        Polynom_add(&result, buff, ops);
     }
+
+    free(left->koefs);
+    memcpy(left, &result, sizeof(struct Polynom));
 }
 
-void* calc(struct Polynom *polynom, const void* arg, const struct Operations ops) {
+void* Polynom_calc(struct Polynom *polynom, const void* arg, const struct Operations ops) {
     size_t size = polynom->koef_size;
     void* result = malloc(size);
     void* addend = malloc(size);
@@ -128,47 +154,51 @@ void int_makeZero(void* av) {
 }
 void int_add(void* av, const void* bv) {
     int *a = (int*)av;
-    int *b = (int*)bv;
+    const int *b = (const int*)bv;
     *a += *b;
 }
 void int_mult(void* av, const void* bv) {
     int *a = (int*)av;
-    int *b = (int*)bv;
+    const int *b = (const int*)bv;
     *a *= *b;
 }
 
 int main(void) {
-    int *koefs = malloc(3 * sizeof(int));
-    koefs[0] = 1;
-    koefs[1] = -2;
-    koefs[2] = 1;
-    struct Polynom a = {
-        .koefs = koefs,
-        .koef_size = sizeof(int),
-        .degree = 2,
-    };
     struct Operations ops = {
         .add = int_add,
         .multiply = int_mult,
         .makeZero = int_makeZero,
     };
-    int *koefs2 = malloc(3 * sizeof(int));
-    koefs[0] = 1;
-    koefs[1] = 2;
-    koefs[2] = 1;
-    struct Polynom b = {
-        .koefs = koefs2,
+
+    int *koefs = malloc(3 * sizeof(int));
+    struct Polynom a = {
+        .koefs = (char*)koefs,
         .koef_size = sizeof(int),
         .degree = 2,
     };
-    memcpy(b.koefs, a.koefs, 3 * sizeof(int));
-    multiplyByPolynom(&a, b, ops);
-    int arg = 2;
-    int* result = calc(&b, &arg, ops);
+    koefs[0] = 1;
+    koefs[1] = -2;
+    koefs[2] = 1;
+
+    int *koefs2 = malloc(3 * sizeof(int));
+    struct Polynom b = {
+        .koefs = (char*)koefs2,
+        .koef_size = sizeof(int),
+        .degree = 2,
+    };
+    koefs2[0] = 1;
+    koefs2[1] = -2;
+    koefs2[2] = 1;
+
+
+    Polynom_compose(&a, b, ops);
+
+    int arg = 0;
+    int* result = Polynom_calc(&a, &arg, ops);
     printf("%d\n", *result);
-    result = calc(&a, &arg, ops);
-    printf("%d\n", *result);
-    free(koefs);
-    free(koefs2);
+    free(result);
+    intPolynom_print(a);
+    free(a.koefs);
+    free(b.koefs);
     return 0;
 }
