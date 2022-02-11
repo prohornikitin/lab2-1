@@ -48,20 +48,25 @@ void Polynom_add(struct Polynom *left, const struct Polynom *right) {
     if(left == NULL) {
         FATAL_ERROR("left addend is NULL");
     }
+    if(right == NULL) {
+        FATAL_ERROR("right addend is NULL");
+    }
     if(memcmp(left->coefsType, right->coefsType, sizeof(struct CoefType)) != 0) {
         FATAL_ERROR("koef type differs");
     }
     struct CoefType *type = right->coefsType;
+    size_t size = type->size;
 
     if(right->degree > left->degree) {
+        left->coefs = realloc(left->coefs, (right->degree + 1) * size);
+        for(size_t i = left->degree + 1; i <= right->degree; ++i) {
+            type->makeZero(left->coefs + i * size);
+        }
         left->degree = right->degree;
-        left->coefs = realloc(left->coefs, right->degree * type->size);
     }
 
-    size_t degree = left->degree;
-    size_t size = type->size;
-    for(size_t i = 0; i <= degree; ++i) {
-        type->add(left->coefs + i * size, right->coefs + i * type->size);
+    for(size_t i = 0; i <= right->degree; ++i) {
+        type->add(left->coefs + i * size, right->coefs + i * size);
     }
 }
 
@@ -157,13 +162,13 @@ void* Polynom_calc(struct Polynom *p, const void* arg) {
 }
 
 void Polynom_print(const struct Polynom *p) {
-    const char* koefs = p->coefs;
+    const char* coefs = p->coefs;
     struct CoefType *type = p->coefsType;
     for(size_t i = p->degree; i > 0; --i) {
-        type->print(koefs + (i * type->size));
+        type->print(coefs + (i * type->size));
         printf("*x^%zu + ", i);
     }
-    type->print(koefs);
+    type->print(coefs);
     printf("\n");
 }
 

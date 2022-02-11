@@ -114,11 +114,11 @@ int main(void) {
     Polynom_add(a, b);
     Polynom_print(a);
 
-    int arg = 1;
-    void* result = Polynom_calc(a, &arg);
-    type.print(result);
-    printf("\n");
-    free(result);
+//    int arg = 1;
+//    void* result = Polynom_calc(a, &arg);
+//    type.print(result);
+//    printf("\n");
+//    free(result);
 
     Polynom_delete(a);
     Polynom_delete(b);
