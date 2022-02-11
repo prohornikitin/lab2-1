@@ -7,8 +7,10 @@ LIBS += -lreadline
 
 SOURCES += \
         main.c \
-        polynom.c
+        polynom.c \
+        ui.c
 
 HEADERS += \
-    fatal_error.h \
-    polynom.h
+    errors_handle.h \
+    polynom.h \
+    ui.h

@@ -1,5 +1,5 @@
-#ifndef FATAL_ERROR_H
-#define FATAL_ERROR_H
+#ifndef ERRORS_HANDLE_H
+#define ERRORS_HANDLE_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,4 +9,4 @@
     exit(1);
 
 
-#endif // FATAL_ERROR_H
+#endif // ERRORS_HANDLE_H
