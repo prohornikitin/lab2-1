@@ -3,6 +3,7 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 CONFIG += c99
+LIBS += -lreadline
 
 SOURCES += \
         main.c \

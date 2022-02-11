@@ -8,9 +8,10 @@ struct Polynom;
 struct CoefType {
     size_t size;
     void (*makeZero)(void*);
-    void (*add)(void*, const void*);
-    void (*multiply)(void*, const void*);
+    void (*add)(void* left, const void* right);
+    void (*multiply)(void* left, const void* right);
     void (*print)(const void*);
+    void (*fromStr)(void *dest, const char *str, char **end);
 };
 
 struct Polynom *Polynom_new(struct CoefType *coefsType, size_t degree, void* koefs);
