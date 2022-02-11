@@ -5,4 +5,9 @@ CONFIG -= qt
 CONFIG += c99
 
 SOURCES += \
-        main.c
+        main.c \
+        polynom.c
+
+HEADERS += \
+    fatal_error.h \
+    polynom.h
