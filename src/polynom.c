@@ -12,11 +12,33 @@ struct polynom {
     size_t degree;
 };
 
+struct coefType *coefType_new(
+        size_t size,
+        void *zero,
+        void (*add)(void* left, const void* right),
+        void (*multiply)(void* left, const void* right)
+) {
+    struct coefType* new = malloc(sizeof(struct coefType));
+    new->add = add;
+    new->multiply = multiply;
+    new->size = size;
+    new->zero = malloc(size);
+    memcpy(new->zero, zero, size);
+    return new;
+}
+
+void coefType_delete(struct coefType *t) {
+    free(t->zero);
+    free(t);
+}
+
 struct polynom *polynom_new(struct coefType *coefsType, size_t degree, void* coefs) {
     struct polynom* new = malloc(sizeof(struct polynom));
+    size_t allCoefsSize = (degree+1) * coefsType->size;
     new->degree = degree;
     new->coefsType = coefsType;
-    new->coefs = coefs;
+    new->coefs = malloc(allCoefsSize);
+    memcpy(new->coefs, coefs, allCoefsSize);
     return new;
 }
 

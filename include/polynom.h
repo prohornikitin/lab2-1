@@ -12,6 +12,15 @@ struct coefType {
     void (*multiply)(void* left, const void* right);
 };
 
+
+struct coefType *coefType_new(
+        size_t size,
+        void *zero,
+        void (*add)(void* left, const void* right),
+        void (*multiply)(void* left, const void* right)
+);
+void coefType_delete(struct coefType *t);
+
 struct polynom *polynom_new(struct coefType *coefsType, size_t degree, void* coefs);
 void polynom_delete(struct polynom *polynom);
 const void* polynom_get_coef(const struct polynom *p, size_t degree);

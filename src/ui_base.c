@@ -6,6 +6,17 @@
 #include <errno.h>
 #include <readline/readline.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <limits.h>
+#include <stdint.h>
+
+void console_clear() {
+    #if defined(__linux__)
+        system("clear");
+    #elif defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+        system("cls");
+    #endif
+}
 
 
 void console_print_polynom(const struct polynom *p, void(*print)(const void*) ) {
@@ -17,9 +28,9 @@ void console_print_polynom(const struct polynom *p, void(*print)(const void*) ) 
     printf("\n");
 }
 
-size_t console_read_sizet(const char* prompt, size_t min, size_t max) {
+unsigned long long console_read_ull(const char* prompt, unsigned long long min, unsigned long long max) {
     bool isError = true;
-    size_t num = 0;
+    unsigned long long num = 0;
     do {
         char* s = readline(prompt);
         if (!s) {
@@ -28,11 +39,15 @@ size_t console_read_sizet(const char* prompt, size_t min, size_t max) {
         }
 
         char* end = NULL;
-        num = strtoull(s, &end, 10);
+        if(sizeof(size_t) == sizeof(unsigned long long)) {
+            num = strtoull(s, &end, 10);
+        } else if(sizeof(size_t) == sizeof(unsigned long)) {
+            num = strtoull(s, &end, 10);
+        }
         if (end == s || *end != '\0') {
             printf("Expected an integer number. Try again.\n");
         } else if (errno == ERANGE || (num < min) || (num > max) || s[0] == '-') {
-            printf("Entered number is not in a valid range. It must be from %zu to %zu.\n", min, max);
+            printf("Entered number is not in a valid range. It must be from %llu to %llu.\n", min, max);
         } else {
             isError = false;
         }
@@ -46,7 +61,7 @@ struct polynom *console_read_polynom(
         struct coefType *type,
         void(*parseType)(void *dest, const char *str, char **end)
 ) {
-    size_t degree = console_read_sizet("Polynom degree: ", 0, __LONG_MAX__);
+    size_t degree = console_read_ull("Polynom degree: ", 0, SIZE_MAX);
 
     char* coefs = malloc(type->size * (degree + 1));
     bool isError = false;
@@ -73,5 +88,18 @@ struct polynom *console_read_polynom(
             printf("Сan't parse the coefs. Please, try again.\n");
         }
     } while (isError);
-    return polynom_new(type, degree, coefs);
+    struct polynom *p = polynom_new(type, degree, coefs);
+    free(coefs);
+    return p;
+}
+
+size_t console_menu(size_t entries_count, ...) {
+    va_list entries;
+    va_start(entries, entries_count);
+    console_clear();
+    for(size_t i = 0; i < entries_count; ++i) {
+        printf("%zu) %s\n", i+1, va_arg(entries, const char*));
+    }
+    va_end(entries);
+    return console_read_ull("Option number: ", 1, entries_count);
 }
