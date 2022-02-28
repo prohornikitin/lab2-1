@@ -12,6 +12,8 @@ struct polynom {
     size_t degree;
 };
 
+
+
 struct coefType *coefType_new(
         size_t size,
         void *zero,
@@ -22,8 +24,7 @@ struct coefType *coefType_new(
     new->add = add;
     new->multiply = multiply;
     new->size = size;
-    new->zero = malloc(size);
-    memcpy(new->zero, zero, size);
+    new->zero = zero;
     return new;
 }
 
@@ -45,6 +46,10 @@ struct polynom *polynom_new(struct coefType *coefsType, size_t degree, void* coe
 void polynom_delete(struct polynom *polynom) {
     free(polynom->coefs);
     free(polynom);
+}
+
+struct polynom *polynom_copy(const struct polynom* p) {
+    return polynom_new(p->coefsType, p->degree, p->coefs);
 }
 
 void polynom_add(struct polynom *left, const struct polynom *right) {
@@ -116,24 +121,19 @@ void polynom_compose(struct polynom *left, const struct polynom *right) {
                 .coefsType = type,
                 .degree = max_result_degree,
     };
-    memcpy(result.coefs, left->coefs, type->size);
+    memcpy(result.coefs, polynom_get_coef(left, 0), type->size);
     for(size_t i = 1; i <= max_result_degree; ++i) {
         memcpy(result.coefs + (i * type->size), type->zero, type->size);
     }
-    struct polynom buff = {
-        .coefsType = type,
-        .degree = right->degree,
-    };
-    buff.coefs = malloc((buff.degree+1) * type->size);
     for(size_t i = 1; i <= left->degree; ++i) {
-        memcpy(buff.coefs, right->coefs, (buff.degree+1) * type->size);
+        struct polynom *buff = polynom_copy(right);
         for(size_t j = 1; j < i; j++) {
-            polynom_mult_by_polynom(&buff, right);
+            polynom_mult_by_polynom(buff, right);
         }
-        polynom_mult_by_skalar(&buff, left->coefs + (i * type->size));
-        polynom_add(&result, &buff);
+        polynom_mult_by_skalar(buff, polynom_get_coef(left, i));
+        polynom_add(&result, buff);
+        polynom_delete(buff);
     }
-    free(buff.coefs);
     free(left->coefs);
     memcpy(left, &result, sizeof(struct polynom));
 }

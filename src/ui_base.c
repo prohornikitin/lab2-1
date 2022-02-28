@@ -9,8 +9,15 @@
 #include <stdarg.h>
 #include <limits.h>
 #include <stdint.h>
+#if defined(__linux__)
+    #include <termios.h>
+    #include <unistd.h>
+#elif defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+    #include <conio.h>
+#endif
 
-void console_clear() {
+
+void console_clear(void) {
     #if defined(__linux__)
         system("clear");
     #elif defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
@@ -18,8 +25,22 @@ void console_clear() {
     #endif
 }
 
+void wait_for_input(void) {
+    #if defined(__linux__)
+        struct termios oldt,newt;
+        tcgetattr( STDIN_FILENO, &oldt );
+        newt = oldt;
+        newt.c_lflag &= ~( (unsigned int)ICANON | (unsigned int)ECHO );
+        tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+        getchar();
+        tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+    #elif defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+        getch();
+    #endif
+}
 
-void console_print_polynom(const struct polynom *p, void(*print)(const void*) ) {
+
+void console_print_polynom(const struct polynom *p, void(*print)(const void*)) {
     for(size_t i = polynom_get_degree(p); i > 0; --i) {
         print(polynom_get_coef(p, i));
         printf("*x^%zu + ", i);
@@ -96,6 +117,7 @@ struct polynom *console_read_polynom(
 size_t console_menu(size_t entries_count, ...) {
     va_list entries;
     va_start(entries, entries_count);
+    printf("\n");
     console_clear();
     for(size_t i = 0; i < entries_count; ++i) {
         printf("%zu) %s\n", i+1, va_arg(entries, const char*));

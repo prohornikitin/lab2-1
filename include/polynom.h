@@ -21,8 +21,9 @@ struct coefType *coefType_new(
 );
 void coefType_delete(struct coefType *t);
 
-struct polynom *polynom_new(struct coefType *coefsType, size_t degree, void* coefs);
-void polynom_delete(struct polynom *polynom);
+struct polynom *polynom_new(struct coefType*, size_t degree, void* coefs);
+void polynom_delete(struct polynom*);
+struct polynom *polynom_copy(const struct polynom*);
 const void* polynom_get_coef(const struct polynom *p, size_t degree);
 size_t polynom_get_degree(const struct polynom *p);
 void polynom_add(struct polynom *left, const struct polynom *right);

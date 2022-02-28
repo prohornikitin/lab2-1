@@ -6,7 +6,7 @@
 
 #define FATAL_ERROR(str) \
     fprintf(stderr, "%s:%d: error: %s\n", __FILE__, __LINE__, str); \
-    exit(1);
+    exit(1)
 
 
 #endif // ERRORS_HANDLE_H
